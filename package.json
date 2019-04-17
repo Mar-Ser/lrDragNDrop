@@ -37,8 +37,5 @@
       "url": "https://github.com/lorenzofox3/lrDragNDrop"
     }
   ],
-  "engines": {
-    "node": "~0.8 || ~0.10"
-  },
   "version": "1.0.2"
 }
