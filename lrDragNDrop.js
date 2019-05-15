@@ -1,8 +1,10 @@
-(function (ng) {
+(function(ng) {
     'use strict';
 
-    function isJqueryEventDataTransfer(){
-        return window.jQuery && (-1 == window.jQuery.event.props.indexOf('dataTransfer'));
+    function isJqueryEventDataTransfer() {
+        return window.jQuery &&
+            window.jQuery.event.props &&
+            -1 == window.jQuery.event.props.indexOf('dataTransfer');
     }
 
     if (isJqueryEventDataTransfer()) {
@@ -11,7 +13,7 @@
 
     var module = ng.module('lrDragNDrop', []);
 
-    module.service('lrDragStore', ['$document', function (document) {
+    module.service('lrDragStore', ['$document', function(document) {
 
         var store = {};
 
@@ -23,9 +25,9 @@
             }
         };
 
-        this.get = function (namespace) {
-            var
-                modelItem = store[namespace], itemIndex;
+        this.get = function(namespace) {
+            var modelItem = store[namespace],
+                itemIndex;
 
             if (modelItem) {
                 itemIndex = modelItem.collection.indexOf(modelItem.item);
@@ -39,14 +41,14 @@
             store = {};
         };
 
-        this.isHolding = function (namespace) {
+        this.isHolding = function(namespace) {
             return store[namespace] !== undefined;
         };
 
         document.bind('dragend', this.clean);
     }]);
 
-    module.service('lrDragHelper', function () {
+    module.service('lrDragHelper', function() {
         var th = this;
 
         th.parseRepeater = function(scope, attr) {
@@ -70,22 +72,23 @@
             return function compileFunc(el, iattr) {
                 iattr.$set('draggable', true);
                 return function linkFunc(scope, element, attr) {
-                    var
-                        collection,
-                        key = (safe === true ? attr.lrDragSrcSafe : attr.lrDragSrc ) || 'temp';
+                    var collection,
+                        key = (safe === true ? attr.lrDragSrcSafe : attr.lrDragSrc) || 'temp';
 
-                    if(attr.lrDragData) {
-                        scope.$watch(attr.lrDragData, function (newValue) {
+                    if (attr.lrDragData) {
+                        scope.$watch(attr.lrDragData, function(newValue) {
                             collection = newValue;
                         });
                     } else {
                         collection = th.parseRepeater(scope, attr);
                     }
 
-                    element.bind('dragstart', function (evt) {
+                    element.bind('dragstart', function(evt) {
                         store.hold(key, collection[scope.$index], collection, safe);
-                        if(angular.isDefined(evt.dataTransfer)) {
-                            evt.dataTransfer.setData('text/html', null); //FF/jQuery fix
+                        var isFirefox = typeof InstallTrigger !== 'undefined',
+                            dataTransfer = evt.dataTransfer || evt.originalEvent.dataTransfer;
+                        if (isFirefox && angular.isDefined(dataTransfer)) {
+                            dataTransfer.setData('text/html', null); //FF/jQuery fix
                         }
                     });
                 }
@@ -93,24 +96,19 @@
         }
     });
 
-    module.directive('lrDragSrc', ['lrDragStore', 'lrDragHelper', function (store, dragHelper) {
-        return{
-            compile: dragHelper.lrDragSrcDirective(store)
-        };
+    module.directive('lrDragSrc', ['lrDragStore', 'lrDragHelper', function(store, dragHelper) {
+        return { compile: dragHelper.lrDragSrcDirective(store) };
     }]);
 
-    module.directive('lrDragSrcSafe', ['lrDragStore', 'lrDragHelper', function (store, dragHelper) {
-        return{
-            compile: dragHelper.lrDragSrcDirective(store, true)
-        };
+    module.directive('lrDragSrcSafe', ['lrDragStore', 'lrDragHelper', function(store, dragHelper) {
+        return { compile: dragHelper.lrDragSrcDirective(store, true) };
     }]);
 
-    module.directive('lrDropTarget', ['lrDragStore', 'lrDragHelper', '$parse', function (store, dragHelper, $parse) {
+    module.directive('lrDropTarget', ['lrDragStore', 'lrDragHelper', '$parse', function(store, dragHelper, $parse) {
         return {
-            link: function (scope, element, attr) {
+            link: function(scope, element, attr) {
 
-                var
-                    collection,
+                var collection,
                     key = attr.lrDropTarget || 'temp',
                     classCache = null;
 
@@ -126,17 +124,16 @@
                     }
                 }
 
-                if(attr.lrDragData) {
-                    scope.$watch(attr.lrDragData, function (newValue) {
+                if (attr.lrDragData) {
+                    scope.$watch(attr.lrDragData, function(newValue) {
                         collection = newValue;
                     });
                 } else {
                     collection = dragHelper.parseRepeater(scope, attr);
                 }
 
-                element.bind('drop', function (evt) {
-                    var
-                        collectionCopy = ng.copy(collection),
+                element.bind('drop', function(evt) {
+                    var collectionCopy = ng.copy(collection),
                         item = store.get(key),
                         dropIndex, i, l;
                     if (item !== null) {
@@ -151,10 +148,10 @@
                                 }
                             }
                         }
-                        scope.$apply(function () {
+                        scope.$apply(function() {
                             collection.splice(dropIndex, 0, item);
                             var fn = $parse(attr.lrDropSuccess) || ng.noop;
-                            fn(scope, {e: evt, item: item, collection: collection});
+                            fn(scope, { e: evt, item: item, collection: collection });
                         });
                         evt.preventDefault();
                         resetStyle();
@@ -164,7 +161,7 @@
 
                 element.bind('dragleave', resetStyle);
 
-                element.bind('dragover', function (evt) {
+                element.bind('dragover', function(evt) {
                     var className;
                     if (store.isHolding(key)) {
                         className = isAfter(evt.offsetX, evt.offsetY) ? 'lr-drop-target-after' : 'lr-drop-target-before';
